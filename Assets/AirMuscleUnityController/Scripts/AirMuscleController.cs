@@ -8,10 +8,12 @@ public class AirMuscleController : MonoBehaviour {
 
     [Header("Arduino")]
     public ArduinoSender sender;
+    public const int MAX_VALVE = 70;
+    public const int MIN_VALVE = 0;
 
     [Header("Debug")]
     public bool FlagEnabeSinWave = true;
-    public float SendSinWaveSpeed = 0.1f;
+    public float SendSinWaveSpeed = 0.05f;
     public float SinWaveTime = 1.0f;
     public int MinSinValve = 0;
     public int MaxSinValve = 70;
@@ -42,9 +44,23 @@ public class AirMuscleController : MonoBehaviour {
 
 
 
+
+    public void SetValve(string _value)
+    {
+        if(_value != "") SetValve(float.Parse(_value));
+    }
+
+
+
     void SetValve(float _value)
     {
+        /* Limit the value value */
+        _value = Mathf.Clamp(_value, MIN_VALVE, MAX_VALVE);
+
+        /* Sending to the arduino*/
         sender.WriteToArduino(_value.ToString());
+
+        /* refreshing the UI */
         if (DebugText != null) DebugText.text = _value.ToString();
         if (DebugSinSlider != null) DebugSinSlider.value = _value;
     }
@@ -73,9 +89,15 @@ public class AirMuscleController : MonoBehaviour {
     {
         while (FlagEnabeSinWave)
         {
-            float valve = MaxSinValve * Mathf.Sin(Mathf.PingPong(Time.time * SinWaveTime, Mathf.PI)) + MinSinValve;
-            //Debug.LogFormat("Testing sin wave, the valve: {0}", valve);
+            
+            float t = Mathf.PingPong(Time.time * SinWaveTime, Mathf.PI);
+            //Debug.LogFormat("Testing sin wave, the valve: {0}", t);
+
+            //半個正弦波，一個週期3秒，SinWaveTime可控制週期。
+            float valve = MaxSinValve * Mathf.Sin(t) + MinSinValve;
+            
             SetValve(valve);
+
             yield return new WaitForSeconds(SendSinWaveSpeed);
         }
     }

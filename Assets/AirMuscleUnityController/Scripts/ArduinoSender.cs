@@ -68,6 +68,7 @@ public class ArduinoSender : MonoBehaviour {
     
     void OnApplicationQuit()
     {
+        WriteToArduino("0");
         if (stream.IsOpen) stream.Close();
     }
 }
