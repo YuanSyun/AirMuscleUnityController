@@ -61,7 +61,7 @@ public class AirMuscleController : MonoBehaviour {
         sender.WriteToArduino(_value.ToString());
 
         /* refreshing the UI */
-        if (DebugText != null) DebugText.text = _value.ToString();
+        if (DebugText != null) DebugText.text = ((int)_value).ToString()+"%";
         if (DebugSinSlider != null) DebugSinSlider.value = _value;
     }
 
