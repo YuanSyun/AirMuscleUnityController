@@ -10,14 +10,13 @@ public class AirMuscleController : MonoBehaviour {
     public ArduinoSender sender;
 
     [Header("Debug")]
-    public bool FlagTestingSinWave = true;
+    public bool FlagEnabeSinWave = true;
     public float SendSinWaveSpeed = 0.1f;
     public float SinWaveTime = 1.0f;
     public int MinSinValve = 0;
     public int MaxSinValve = 70;
     public Text DebugText;
     public Slider DebugSinSlider;
-    private float lastSinTime;
 
 
 
@@ -30,8 +29,7 @@ public class AirMuscleController : MonoBehaviour {
             this.gameObject.SetActive(false);
         }
 
-        lastSinTime = Time.time;
-        if (SinWaveTime < 0.1f) SinWaveTime = 0.1f;
+        if (FlagEnabeSinWave) StartSinWave();
     }
 
 
@@ -40,28 +38,47 @@ public class AirMuscleController : MonoBehaviour {
     // Update is called once per frame
     void Update() {
 
-        if (FlagTestingSinWave && (Time.time - lastSinTime > SendSinWaveSpeed))
-        {
-            //int valve = (int)(MaxSinValve * Mathf.Sin(Mathf.PingPong(Time.time * 2.0f, Mathf.PI)) + MinSinValve);
-            float valve = MaxSinValve * Mathf.Sin(Mathf.PingPong(Time.time * SinWaveTime, Mathf.PI)) + MinSinValve;
-            //Debug.LogFormat("Testing sin wave, the valve: {0}", valve);
-            sender.WriteToArduino(valve.ToString());
-            if (DebugText != null) DebugText.text = valve.ToString();
-            if (DebugSinSlider != null) DebugSinSlider.value = valve;
-            lastSinTime = Time.time;
-        }
     }
 
 
 
+    void SetValve(float _value)
+    {
+        sender.WriteToArduino(_value.ToString());
+        if (DebugText != null) DebugText.text = _value.ToString();
+        if (DebugSinSlider != null) DebugSinSlider.value = _value;
+    }
 
+
+
+    #region Sin Wave
     public void StartSinWave()
     {
-        FlagTestingSinWave = true;
+        FlagEnabeSinWave = true;
+        StartCoroutine(TestingSinWave());
     }
 
-    public void EndSinWave()
+    public void PauseSinWave()
     {
-        FlagTestingSinWave = false;
+        FlagEnabeSinWave = false;
     }
+
+    public void StopSinWave()
+    {
+        FlagEnabeSinWave = false;
+        SetValve(0);
+    }
+
+    IEnumerator TestingSinWave()
+    {
+        while (FlagEnabeSinWave)
+        {
+            float valve = MaxSinValve * Mathf.Sin(Mathf.PingPong(Time.time * SinWaveTime, Mathf.PI)) + MinSinValve;
+            //Debug.LogFormat("Testing sin wave, the valve: {0}", valve);
+            SetValve(valve);
+            yield return new WaitForSeconds(SendSinWaveSpeed);
+        }
+    }
+    #endregion
+
 }

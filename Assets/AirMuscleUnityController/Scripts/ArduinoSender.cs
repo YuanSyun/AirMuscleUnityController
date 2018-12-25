@@ -18,7 +18,7 @@ public class ArduinoSender : MonoBehaviour {
 
 
 	// Use this for initialization
-	void Start () {
+	void Awake () {
 
         try
         {
