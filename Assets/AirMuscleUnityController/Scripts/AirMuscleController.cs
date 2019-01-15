@@ -6,12 +6,15 @@ using UnityEngine.UI;
 
 public class AirMuscleController : MonoBehaviour {
 
+    [Header("Debug")]
+    public bool DEBUG_LOG = false;
+
     [Header("Arduino")]
     public ArduinoSender sender;
     public const int MAX_VALVE = 70;
     public const int MIN_VALVE = 0;
 
-    [Header("Debug")]
+    [Header("Sine Wave")]
     public bool FlagEnabeSinWave = true;
     public float SendSinWaveSpeed = 0.05f;
     public float SinWaveTime = 1.0f;
@@ -20,10 +23,71 @@ public class AirMuscleController : MonoBehaviour {
     public Text DebugText;
     public Slider DebugSinSlider;
 
+    [Header("Left Air Controller")]
+    private bool m_LSV1 = false;
+    private bool m_LSV2 = false;
+    private bool m_LSV3 = false;
+    private bool m_LSV4 = false;
+    private float leftValveValue = 0;
+
+    private float lastSendingTime;
 
 
-	// Use this for initialization
-	void Start () {
+
+    #region api
+    public void SetLeftValve(string _value)
+    {
+        if (_value != "") this.leftValveValue = float.Parse(_value);
+        SendSingal();
+    }
+
+    public void SetLeftLayer1(bool _flag)
+    {
+        this.m_LSV1 = _flag;
+        SendSingal();
+    }
+
+    public void SetLeftLayer2(bool _flag)
+    {
+        this.m_LSV2 = _flag;
+        SendSingal();
+    }
+
+    public void SetLeftLayer3(bool _flag)
+    {
+        this.m_LSV3 = _flag;
+        SendSingal();
+    }
+
+    public void SetLeftLayer4(bool _flag)
+    {
+        this.m_LSV4 = _flag;
+        SendSingal();
+    }
+
+    public void StartSinWave()
+    {
+        FlagEnabeSinWave = true;
+        StartCoroutine(TestingSinWave());
+    }
+
+    public void PauseSinWave()
+    {
+        FlagEnabeSinWave = false;
+    }
+
+    public void StopSinWave()
+    {
+        FlagEnabeSinWave = false;
+        this.leftValveValue = 0;
+        SendSingal();
+    }
+    #endregion
+
+
+
+    // Use this for initialization
+    void Start () {
 		
         if(sender==null)
         {
@@ -39,51 +103,42 @@ public class AirMuscleController : MonoBehaviour {
 
     // Update is called once per frame
     void Update() {
-
+        
     }
 
 
 
-
-    public void SetValve(string _value)
+    void OnDisable()
     {
-        if(_value != "") SetValve(float.Parse(_value));
+
     }
 
 
 
-    void SetValve(float _value)
+    void SendSingal()
     {
         /* Limit the value value */
-        _value = Mathf.Clamp(_value, MIN_VALVE, MAX_VALVE);
+        this.leftValveValue = Mathf.Clamp(this.leftValveValue, MIN_VALVE, MAX_VALVE);
 
         /* Sending to the arduino*/
-        sender.WriteToArduino(_value.ToString());
+        string command = "";
+        command += this.leftValveValue.ToString() + " ";
+        command += (m_LSV1 ? 1 : 0) + " ";
+        command += (m_LSV2 ? 1 : 0) + " ";
+        command += (m_LSV3 ? 1 : 0) + " ";
+        command += (m_LSV4 ? 1 : 0);
+        sender.WriteToArduino(command);
+        if (DEBUG_LOG)
+        {
+            Debug.LogFormat("[Command] {0}", command);
+        }
 
         /* refreshing the UI */
-        if (DebugText != null) DebugText.text = ((int)_value).ToString()+"%";
-        if (DebugSinSlider != null) DebugSinSlider.value = _value;
+        if (DebugText != null) DebugText.text = ((int)this.leftValveValue).ToString() + "%";
+        if (DebugSinSlider != null) DebugSinSlider.value = this.leftValveValue;
     }
 
 
-
-    #region Sin Wave
-    public void StartSinWave()
-    {
-        FlagEnabeSinWave = true;
-        StartCoroutine(TestingSinWave());
-    }
-
-    public void PauseSinWave()
-    {
-        FlagEnabeSinWave = false;
-    }
-
-    public void StopSinWave()
-    {
-        FlagEnabeSinWave = false;
-        SetValve(0);
-    }
 
     IEnumerator TestingSinWave()
     {
@@ -94,13 +149,21 @@ public class AirMuscleController : MonoBehaviour {
             //Debug.LogFormat("Testing sin wave, the valve: {0}", t);
 
             //半個正弦波，一個週期3秒，SinWaveTime可控制週期。
-            float valve = MaxSinValve * Mathf.Sin(t) + MinSinValve;
-            
-            SetValve(valve);
+            this.leftValveValue = MaxSinValve * Mathf.Sin(t) + MinSinValve;
+
+            SendSingal();
 
             yield return new WaitForSeconds(SendSinWaveSpeed);
         }
     }
-    #endregion
+
+    void Reset()
+    {
+        this.leftValveValue = 0;
+        m_LSV1 = false;
+        m_LSV2 = false;
+        m_LSV3 = false;
+        m_LSV4 = false;
+    }
 
 }
