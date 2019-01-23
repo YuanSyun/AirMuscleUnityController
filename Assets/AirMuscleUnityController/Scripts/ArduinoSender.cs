@@ -15,17 +15,44 @@ public class ArduinoSender : MonoBehaviour {
     public string data="";
 
     private SerialPort stream;
+    private string m_serialReadData = "";
 
 
 
-	// Use this for initialization
-	void Awake () {
+    #region api
+    public string GetSerialReadData
+    {
+        get { return m_serialReadData; }
+    }
+
+    public void WriteToArduino(string message)
+    {
+        if (stream.IsOpen && (message != ""))
+        {
+            try
+            {
+                stream.WriteLine(message);
+                stream.BaseStream.Flush();
+            }
+            catch (IOException e)
+            {
+                Debug.Log(e.Message);
+            }
+        }
+    }
+    #endregion
+
+
+
+    // Use this for initialization
+    void Awake () {
 
         try
         {
-            stream = new SerialPort("\\\\.\\COM15", 14400);
-            stream.ReadTimeout = 2;
+            stream = new SerialPort("\\\\.\\COM15", 19200);
+            stream.ReadTimeout = 8;
             stream.WriteTimeout = 32;
+            stream.NewLine = "\n";
             stream.Open();
         }
         catch (IOException e)
@@ -45,17 +72,14 @@ public class ArduinoSender : MonoBehaviour {
 
 	}
 
-
-
     void Start()
     {
         if (readSerialPort)
         {
             StartCoroutine(ReadTheSerialPort());
+            Debug.LogFormat("[Debug] start reading the serial port");
         }
     }
-	
-
 
 	// Update is called once per frame
 	void Update () {
@@ -67,30 +91,11 @@ public class ArduinoSender : MonoBehaviour {
         }
 	}
 
-
-    public void WriteToArduino(string message)
-    {
-        if (stream.IsOpen && (message != ""))
-        {
-            try
-            {
-                stream.WriteLine(message);
-            }
-            catch(IOException e)
-            {
-                Debug.Log(e.Message);
-            }
-        }
-    }
-
-
-
-    
     void OnDisable()
     {
         /* When exit the app will reset the valve value */
         Debug.LogFormat("[Debug] Reset the valve value");
-        WriteToArduino("0 0 0 0 0");
+        WriteToArduino("0 0 0 0 0 0 0 0 0 0");
         if (stream.IsOpen) stream.Close();
     }
 
@@ -98,18 +103,23 @@ public class ArduinoSender : MonoBehaviour {
     {
         yield return new WaitForSeconds(1.0f);
 
+        Debug.LogFormat("stream: {0}, is open: {1}", stream, stream.IsOpen);
+
         while (stream != null && stream.IsOpen)
         {
             try
             {
-                string serial_info = stream.ReadLine();
-                Debug.LogFormat("[SerialPort]\n{0}", serial_info);
+                m_serialReadData = stream.ReadLine();
 
+                //stream.BaseStream.Flush();
+                //stream.DiscardInBuffer();
+                //Debug.LogFormat("[SerialPort]\n{0}", m_serialReadData);
             }
-            catch(System.TimeoutException e)
+            catch (System.TimeoutException e)
             {
                 //Debug.LogFormat("[Debug] {0}", e.Message);
             }
+
             yield return new WaitForSeconds(0.1f);
         }
     }
